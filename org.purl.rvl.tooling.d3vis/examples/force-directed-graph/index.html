@@ -31,6 +31,7 @@
         var drawLinks = true; // choose whether only nodes should be drawn and layouted
         var complexLabeling = true;
         var simpleLabeling = false;
+        var alignedConnectorLabeling = false;
 
         // force-directed-graph
         var lineWidth = 7,
@@ -145,33 +146,49 @@
         	})
     		;
 			
-			/* label aligned at the connector path */
-			/*var path_label = vis.append("svg:g")
-		 		.selectAll(".path_label")
-				.data(force.links()).enter().avmLabeledConnectorAligned();*/
-					
-			/* alternative : simple labeling of connectors */	
+        	if (alignedConnectorLabeling) { 
+        	
+				/* text label aligned at the connector path */
+				var path_label = vis.append("svg:g")
+			 		.selectAll(".path_label")
+					.data(force.links()).enter()
+					.avmLabeledConnectorAligned(
+						function (d) {
+			          		 return "not yet implemented";
+			    		},
+			    		function(d) {
+					      	return "#" + createIDForLink(d);
+					  	}
+					);
+        	}	
+						
         	var connectorLabelGroup = connectorGroup.append("svg:g")
 				.attr("class", function(d) { return "connectorLabelGroup" })
         		.attr("class", "label");
         
+        	/* icon labeling of connectors */	
 			var connectorLabelSymbol = connectorLabelGroup
 			  .filter(function(d) { return d.labels != null ;})
  			  .selectAll(".iconLabelNew")
  			  .data(function(d) { return d.labels }).enter()
-			  .avmShapedWithUseSVGPureEnter()
+			  .avmShapedWithUseSVG() // enter version of the function called here!
+	   	 	  .attr("transform", "scale(1.5)")
 			  .classed("iconLabelNew", true)
+			  ;
+			
+			/* alternative to aligned labeling : simple text labeling of connectors */	
+			var connectorLabelText = connectorLabelGroup
+			  .filter(function(d) { return d.labels != null ;})
+			  .selectAll(".textLabelNew")
+			  .data(function(d) { return d.labels }).enter()
+			  .append("text")
+			  .filter(function(d) { return d.type == "text_label" ;})
+			  .text(function(d){return d.text_value_full ; })
+			  .classed("textLabelNew label", true)
 			  ;
 				
 			// broken? shapes as paths
 			// var connectorLabelSymbol = connectorLabelGroup.avmShapedWithPath();
-				
-			var connectorLabelText = connectorLabelGroup.append("text")
-        		.attr("class", "label")
-        	    //.attr("dx", function(d){return 100})
-        		//.attr("dy", function(d){return 100})
-        	    .text(function(d){return d.text_value ; })
-        		;
         		
 			/* alternative : very simple labeling of connectors by title-tag */	
 			//path.avmTitled();
@@ -243,7 +260,7 @@
 				// highlighting of identical resources (same URI)
 				allNodes.avmHighlightIdentical(d.uri);
 				
-				// extend label to full label // TODO distinguish text_value and label!!!-> move to label mouse-over?
+				// extend label to full label
 				thisNode.selectAll("text.nodeLabel").text(function(d){return d.text_value_full});			
 
 			}
@@ -265,7 +282,10 @@
         	/* node shape as reuse svg symbol */
 			var symbolAsShape = nodeEnter
 				.filter(function(d) { return d.shape_d3_name != null ;})
-				.avmShapedWithUseSVG();
+				.avmShapedWithUseSVG()
+				//.attr("width", "200 px").attr("height", "200 px") // does not seem to work (Firefox at least)
+		      	.attr("transform", function(d) { return "scale(" + d.width/SYMBOL_WIDTH +  ")"; })
+		      	;
 			
         	/* node shape as text */
         	var textAsShape = nodeEnter
@@ -277,43 +297,42 @@
  
 	 		if (complexLabeling) {
 	 
- 			 // complex labeling
-			 
-			 var labelContainerContainer = d3
-				.select("#labelContainerSpace")
-				.selectAll(".labelContainerContainer")
-				.data(graph.nodes).enter()
-				.append("div")
-				.filter(function(d) { return d.labels != null ;})
-				.attr("class","labelContainerContainer")
-				.style("height", function(d) { return d.width + "px";})
-				.style("width", function(d) { return d.width + "px";}); // TODO height
+	 			 // complex labeling
+				 
+				 var labelContainerContainer = d3
+					.select("#labelContainerSpace")
+					.selectAll(".labelContainerContainer")
+					.data(graph.nodes).enter()
+					.append("div")
+					.filter(function(d) { return d.labels != null ;})
+					.attr("class","labelContainerContainer")
+					.style("height", function(d) { return d.width + "px";})
+					.style("width", function(d) { return d.width + "px";}); // TODO height
 			        		 		  	
-				labelContainerContainer.avmLabeledComplexFDG();
+				labelContainerContainer.avmLabeledComplex();
+				
+	            // show tooltip with full label (since extending labels not implemented for complex labels)
+	        	nodeEnter.avmTitled();
 	 		}
 				
-			if (simpleLabeling) {
+	 		else if (simpleLabeling) {
 			
 	        	// simple node labeling and tooltips 
 	
 	        	// The label and a copy of the label as shadow for better readability
-
-				nodeEnter
+	        	/* nodeEnter
 				.filter(function(d) { return d.labels != null ;})
 				.selectAll(".nodeLabelShadow")
 				.data(function(d) { return d.labels }).enter()
-				.avmLabeledFDG().classed("nodeLabelShadow", true);
+				.avmLabeledFDG().classed("nodeLabelShadow", true);*/
 	        	
 				nodeEnter
 				.filter(function(d) { return d.labels != null ;})
 				.selectAll(".nodeLabelText")
 				.data(function(d) { return d.labels }).enter()
-				.avmLabeledFDG().classed("nodeLabelText", true);
+				.avmLabeledFDG().classed("nodeLabelText label", true);
 				
 			}
-	 		
-            // tooltip
-        	//nodeEnter.avmTitled();
 
         	  
         	// Use elliptical arc path segments to doubly-encode directionality.
